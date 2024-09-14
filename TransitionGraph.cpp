@@ -62,7 +62,13 @@ bool TransitionGraph::getToken(ifstream &program_file, tokentype &token, string 
 
    while (!states[current_state].is_accepting_state)
    {                                      // accepting state not reached
-      current_char = program_file.get();  // fetch next character from the souce code
+      current_char = program_file.get();  // fetch next character from the source code
+      if (program_file.fail() || program_file.eof())
+      {
+         for (int i = 0; i < char_count; i++)
+            program_file.unget(); // return all characters read so far back to the file stream
+         return false;            // return fail info (failed match)
+      }
       char_count++;                       // increase the char counter
       tmp_lexeme.append(1, current_char); // append the new character
 

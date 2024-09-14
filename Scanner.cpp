@@ -4,9 +4,9 @@
 #include "TransitionGraph.h"
 #include "Scanner.h"
 
-// Initilizes the Scanner
+// Initializes the Scanner
 // It takes an input symbol table as a reference. (Call by reference)
-// It then initializes the symbol table with enties for all the keywords
+// It then initializes the symbol table with entries for all the keywords
 // It also sets up all transition graphs needed by the scanner
 Scanner::Scanner(SymbolTable &input_symbol_table) : symbol_table(input_symbol_table)
 {
@@ -15,7 +15,7 @@ Scanner::Scanner(SymbolTable &input_symbol_table) : symbol_table(input_symbol_ta
    symbol_table.installKeyword("then", THEN);
    symbol_table.installKeyword("else", ELSE);
 
-   // The four varialbes below are used to initialize the transition graphs
+   // The four variables below are used to initialize the transition graphs
    TransitionGraphConfig tg_config[MAX_STATE_COUNT * MAX_CHARACTER_COUNT];
    int tg_config_count;
    AcceptingStateConfig as_config[MAX_STATE_COUNT];
@@ -278,6 +278,73 @@ Scanner::Scanner(SymbolTable &input_symbol_table) : symbol_table(input_symbol_ta
 
    // Call setGraph to set up the transition graph for integer literals using the parameters
    TG_int.setGraph(tg_config, tg_config_count, as_config, as_config_count);
+
+   //*** Setup the transition graph for floating-point literals ***
+
+   // From state 0 to state 1 on characters '0'-'9'
+   tg_config[0].start_state = 0;
+   tg_config[0].end_state = 1;
+   tg_config[0].chars = ""; // enumeration is not used here
+   tg_config[0].start_char = '0';
+   tg_config[0].end_char = '9';
+   tg_config[0].other = false;
+
+   // From state 1 to state 1 on characters '0'-'9'
+   tg_config[1].start_state = 1;
+   tg_config[1].end_state = 1;
+   tg_config[1].chars = ""; // enumeration is not used here
+   tg_config[1].start_char = '0';
+   tg_config[1].end_char = '9';
+   tg_config[1].other = false;
+
+   // From state 1 to state 2 on character '.'
+   tg_config[2].start_state = 1;
+   tg_config[2].end_state = 2;
+   tg_config[2].chars = ".";
+   tg_config[2].start_char = 1; // range is not used here
+   tg_config[2].end_char = 0;
+   tg_config[2].other = false;
+
+   // From state 2 to state 3 on characters '0'-'9'
+   tg_config[3].start_state = 2;
+   tg_config[3].end_state = 3;
+   tg_config[3].chars = ""; // enumeration is not used here
+   tg_config[3].start_char = '0';
+   tg_config[3].end_char = '9';
+   tg_config[3].other = false;
+
+   // From state 3 to state 3 on characters '0'-'9'
+   tg_config[4].start_state = 3;
+   tg_config[4].end_state = 3;
+   tg_config[4].chars = ""; // enumeration is not used here
+   tg_config[4].start_char = '0';
+   tg_config[4].end_char = '9';
+   tg_config[4].other = false;
+
+   // From state 3 to state 4 on all characters other than '0'-'9'
+   // Note that you must setup '0'-'9' before setup "others".
+   // Otherwise errors may occur
+   tg_config[5].start_state = 3;
+   tg_config[5].end_state = 4;
+   tg_config[5].chars = "";     // enumeration is not used here
+   tg_config[5].start_char = 1; // range is not used here
+   tg_config[5].end_char = 0;
+   tg_config[5].other = true;
+
+   // A total of 6 configuration entries used in array tg_config
+   tg_config_count = 6;
+
+   // Specify the accepting state for the transition graph for floating-point literals
+   as_config[0].state_number = 4;
+   as_config[0].token = FLOATLITERAL;   // Corresponding tokentype
+   as_config[0].need_retraction = true; // unget() is needed to put the current character back to the file stream
+
+   // A total of 1 configuration entry used in array as_config
+   // It means 1 accepting state
+   as_config_count = 1;
+
+   // Call setGraph to set up the transition graph for floating-point literals using the parameters
+   TG_float.setGraph(tg_config, tg_config_count, as_config, as_config_count);
 }
 
 // Identify next token from the source code
@@ -333,6 +400,14 @@ bool Scanner::nextToken(ifstream &program_file, string &lexeme, tokentype &token
    if (TG_relop.getToken(program_file, token, lexeme))
    {
       attribute = token; // The attribute for a relop is set to be the relop itself
+      return true;
+   }
+
+   // Try floating-point literal
+   if (TG_float.getToken(program_file, token, lexeme))
+   {
+      // Install the floating-point literal
+      attribute = symbol_table.installLiteral(lexeme, FLOATLITERAL);
       return true;
    }
 

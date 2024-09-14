@@ -22,4 +22,5 @@ private:
    TransitionGraph TG_relop;       // Transition Graph for relation operators
    TransitionGraph TG_id;          // Transition Graph for identifiers
    TransitionGraph TG_int;         // Transition Graph for integer literals
+   TransitionGraph TG_float;       // Transition Graph for floating-point literals
 };
